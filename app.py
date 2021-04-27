@@ -26,7 +26,7 @@ app.layout = html.Div(style={'backgroundColor': colors['background'], 'width': "
         
         '''),
         
-        html.Div(id='div2', children="Population Size"),
+        html.Div(id='div2', children="Population Size "),
    
         dcc.Input(id='populationinput', value=1000, type='text'),
     
@@ -73,16 +73,19 @@ def update_output_div(percentage, population, confidence, errortarget):
     p = int(percentage)/100
     pop = int(population)
     c = int(confidence)/100
-    et = int(errortarget)
-    conf = 1-((1 - c)/2)
+    et = int(errortarget)/100
+    conf = norm.ppf(1-((1 - c)/2))
 
     x = np.array(range(10,pop+1))
     s = (p * (1-p)) / (x-1)
     f = 1 - (x/pop)
     se = (s*f)**(1/2)
-    ci = se * norm.ppf(conf)
+    ci = se * conf
     ci_upper = (p+ ci)*100
     ci_lower = (p - ci)*100
+
+    pp = p*(1-p)
+    sample_size = (conf**2 * pop * pp) / ((conf**2 * pp) + (pop * et**2))
 
     r = {
         'data': [
@@ -97,7 +100,12 @@ def update_output_div(percentage, population, confidence, errortarget):
         ## Percentage Line
         {'x': [0,pop],
         'y': [p*100]*2,
-        'name': 'Actual'}
+        'name': 'Actual'},
+
+        {'x': [sample_size]*2,
+        'y': [0,100],
+        'name': 'Required Sample Size'}
+
     ],
     'layout': {
         'title': 'Estimate of Means',
@@ -156,7 +164,7 @@ def update_ConfGraph(percentage, population, confidence, errortarget):
         },
         'yaxis': {
             'title': 'Estimate (+-%)',
-            'range': [0,20]
+            'range': [0,15]
         }
     },
 
