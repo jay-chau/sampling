@@ -60,15 +60,7 @@ app.layout = html.Div(style={'backgroundColor': colors['background'], 'width': "
     
 ])
 
-@app.callback(
-    Output(component_id='EstimateGraph', component_property='figure'),
-    [Input(component_id='propinput', component_property='value'),
-    Input(component_id='populationinput', component_property='value'),
-    Input(component_id='confidenceinput', component_property='value'),
-    Input(component_id='errorinput', component_property='value')
-    ]
-)
-def update_output_div(percentage, population, confidence, errortarget):
+def calculate_sample_size(percentage, population, confidence, errortarget):
     
     p = int(percentage)/100
     pop = int(population)
@@ -81,11 +73,27 @@ def update_output_div(percentage, population, confidence, errortarget):
     f = 1 - (x/pop)
     se = (s*f)**(1/2)
     ci = se * conf
-    ci_upper = (p+ ci)*100
-    ci_lower = (p - ci)*100
+
 
     pp = p*(1-p)
     sample_size = (conf**2 * pop * pp) / ((conf**2 * pp) + (pop * et**2))
+
+    return x,ci,sample_size, p,pop, conf
+
+@app.callback(
+    Output(component_id='EstimateGraph', component_property='figure'),
+    [Input(component_id='propinput', component_property='value'),
+    Input(component_id='populationinput', component_property='value'),
+    Input(component_id='confidenceinput', component_property='value'),
+    Input(component_id='errorinput', component_property='value')
+    ]
+)
+def update_output_div(percentage, population, confidence, errortarget):
+
+    x, ci, sample_size,p,pop,conf = calculate_sample_size(percentage, population, confidence, errortarget)
+
+    ci_upper = (p+ ci)*100
+    ci_lower = (p - ci)*100
 
     r = {
         'data': [
@@ -104,7 +112,7 @@ def update_output_div(percentage, population, confidence, errortarget):
 
         {'x': [sample_size]*2,
         'y': [0,100],
-        'name': 'Required Sample Size'}
+        'name': 'Required Sample ({})'.format(np.ceil(sample_size).astype(int))}
 
     ],
     'layout': {
@@ -132,29 +140,16 @@ def update_output_div(percentage, population, confidence, errortarget):
 )
 def update_ConfGraph(percentage, population, confidence, errortarget):
     
-    p = int(percentage)/100
-    pop = int(population)
-    c = int(confidence)/100
-    et = int(errortarget)/100
-    conf = norm.ppf(1-((1 - c)/2))
-
-    x = np.array(range(10,pop+1))
-    s = (p * (1-p)) / (x-1)
-    f = 1 - (x/pop)
-    se = (s*f)**(1/2)
-    ci = (se * conf)*100
-
-    pp = p*(1-p)
-    sample_size = (conf**2 * pop * pp) / ((conf**2 * pp) + (pop * et**2))
+    x, ci, sample_size,p,pop,conf = calculate_sample_size(percentage, population, confidence, errortarget)
 
     r = {
         'data': [
         {'x': x,
-        'y': ci,
+        'y': ci*100,
         'name': 'Confidence'},
         {'x': [sample_size]*2,
         'y': [0,20],
-        'name': 'Required Sample Size'}
+        'name': 'Required Sample ({})'.format(np.ceil(sample_size).astype(int))}
     ],
     'layout': {
         'title': 'Confidence Interval | Percentage',
@@ -183,14 +178,7 @@ def update_ConfGraph(percentage, population, confidence, errortarget):
 )
 def update_ConfGraph(percentage, population, confidence, errortarget):
     
-    p = int(percentage)/100
-    pop = int(population)
-    c = int(confidence)/100
-    et = int(errortarget)/100
-    conf = norm.ppf(1-((1 - c)/2))
-
-    pp = p*(1-p)
-    sample_size = (conf**2 * pop * pp) / ((conf**2 * pp) + (pop * et**2))
+    x, ci, sample_size,p,pop,conf = calculate_sample_size(percentage, population, confidence, errortarget)
 
     x = np.linspace(0,1,101)
     s = (x * (1-x))/(sample_size-1)
